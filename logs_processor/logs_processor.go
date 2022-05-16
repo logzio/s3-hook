@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-sdk-go/service/s3"
-	log "github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -22,24 +22,24 @@ const (
 	envLogType     = "LOG_TYPE"
 )
 
-func ProcessLogs(s3Object *s3.GetObjectOutput, logger *log.Entry, key, bucket, awsRegion string) [][]byte {
+func ProcessLogs(s3Object *s3.GetObjectOutput, logger *zap.Logger, key, bucket, awsRegion string) [][]byte {
 	logs := make([][]byte, 0)
 	var logsStr string
 	buf := new(bytes.Buffer)
 	_, err := buf.ReadFrom(s3Object.Body)
 
 	if err != nil {
-		logger.Errorf("Cannot proccess object %s. Error: %s", key, err.Error())
+		logger.Error(fmt.Sprintf("Cannot proccess object %s. Error: %s", key, err.Error()))
 		return nil
 	}
 
 	logsStr = buf.String()
 	contentType := strings.ToLower(*s3Object.ContentType)
 	if strings.Contains(contentType, "zip") {
-		logger.Debugf("Found a compressed file: %s", contentType)
+		logger.Debug(fmt.Sprintf("Found a compressed file: %s", contentType))
 		decompressed, err := decompressBody(buf, contentType, logger)
 		if err != nil {
-			logger.Errorf("Cannot decompress object %s. Error: %s", key, err.Error())
+			logger.Error(fmt.Sprintf("Cannot decompress object %s. Error: %s", key, err.Error()))
 			return nil
 		}
 
@@ -54,7 +54,7 @@ func ProcessLogs(s3Object *s3.GetObjectOutput, logger *log.Entry, key, bucket, a
 		}
 
 		if logBytes != nil && len(logBytes) > 0 {
-			logger.Debugf("Adding log %s to logs list", string(logBytes))
+			logger.Debug(fmt.Sprintf("Adding log %s to logs list", string(logBytes)))
 			logs = append(logs, logBytes)
 		}
 	}
@@ -62,7 +62,7 @@ func ProcessLogs(s3Object *s3.GetObjectOutput, logger *log.Entry, key, bucket, a
 	return logs
 }
 
-func decompressBody(buf *bytes.Buffer, contentType string, logger *log.Entry) ([]byte, error) {
+func decompressBody(buf *bytes.Buffer, contentType string, logger *zap.Logger) ([]byte, error) {
 	switch contentType {
 	case "application/x-gzip":
 		return decompressGzip(buf)
@@ -71,23 +71,23 @@ func decompressBody(buf *bytes.Buffer, contentType string, logger *log.Entry) ([
 	}
 }
 
-func decompressZip(buf *bytes.Buffer, logger *log.Entry) ([]byte, error) {
+func decompressZip(buf *bytes.Buffer, logger *zap.Logger) ([]byte, error) {
 	var decompressed bytes.Buffer
 	body, err := ioutil.ReadAll(buf)
 	if err != nil {
-		logger.Error(err)
+		logger.Error(err.Error())
 	}
 
 	zipReader, err := zip.NewReader(bytes.NewReader(body), int64(len(body)))
 	if err != nil {
-		logger.Error(err)
+		logger.Error(err.Error())
 	}
 
 	// Read all the files from zip archive
 	for _, zipFile := range zipReader.File {
 		unzippedFileBytes, err := readZipFile(zipFile)
 		if err != nil {
-			logger.Errorf("Encountered error while trying to read zip: %s", err.Error())
+			logger.Error(fmt.Sprintf("Encountered error while trying to read zip: %s", err.Error()))
 			continue
 		}
 
@@ -95,7 +95,7 @@ func decompressZip(buf *bytes.Buffer, logger *log.Entry) ([]byte, error) {
 		decompressed.Write([]byte("\n"))
 	}
 
-	logger.Debugf("Full decompressed:\n%s", string(decompressed.Bytes()))
+	logger.Debug(fmt.Sprintf("Full decompressed:\n%s", string(decompressed.Bytes())))
 	return decompressed.Bytes(), nil
 }
 
@@ -125,8 +125,8 @@ func decompressGzip(buf *bytes.Buffer) ([]byte, error) {
 	return decompressed.Bytes(), nil
 }
 
-func convertToLogzioLog(s3Log, bucket, key, awsRegion string, logger *log.Entry) ([]byte, error) {
-	logger.Debugf("Converting log: %s", s3Log)
+func convertToLogzioLog(s3Log, bucket, key, awsRegion string, logger *zap.Logger) ([]byte, error) {
+	logger.Debug(fmt.Sprintf("Converting log: %s", s3Log))
 	if len(s3Log) == 0 {
 		return nil, nil
 	}
@@ -139,7 +139,7 @@ func convertToLogzioLog(s3Log, bucket, key, awsRegion string, logger *log.Entry)
 
 	logBytes, err := json.Marshal(logzioLog)
 	if err != nil {
-		logger.Errorf("Error occurred while processing %s: %s", objFullPath, err.Error())
+		logger.Error(fmt.Sprintf("Error occurred while processing %s: %s", objFullPath, err.Error()))
 	}
 
 	return logBytes, err

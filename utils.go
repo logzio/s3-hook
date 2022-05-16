@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/logzio/logzio-go"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"os"
 	"time"
 )
@@ -89,4 +91,39 @@ func getNewLogzioSender() (*logzio.LogzioSender, error) {
 	}
 
 	return logzioLogger, nil
+}
+
+func getLogger() *zap.Logger {
+	logLevel := getLogLevel()
+	cfg := zap.Config{
+		Encoding:         "json",
+		Level:            zap.NewAtomicLevelAt(logLevel),
+		OutputPaths:      []string{"stdout"},
+		ErrorOutputPaths: []string{"stderr"},
+		EncoderConfig: zapcore.EncoderConfig{
+			MessageKey:   "message",
+			LevelKey:     "level",
+			EncodeLevel:  zapcore.CapitalLevelEncoder,
+			TimeKey:      "time",
+			EncodeTime:   zapcore.ISO8601TimeEncoder,
+			CallerKey:    "caller",
+			EncodeCaller: zapcore.ShortCallerEncoder,
+		},
+	}
+	logger, _ := cfg.Build()
+	return logger
+}
+
+func getLogLevel() zapcore.Level {
+	logLevelStr := getHookLogLevel()
+	levelsMap := map[string]zapcore.Level{
+		LogLevelDebug: zapcore.DebugLevel,
+		LogLevelInfo:  zapcore.InfoLevel,
+		LogLevelWarn:  zapcore.WarnLevel,
+		LogLevelError: zapcore.ErrorLevel,
+		LogLevelPanic: zapcore.PanicLevel,
+		LogLevelFatal: zapcore.FatalLevel,
+	}
+
+	return levelsMap[logLevelStr]
 }

@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"io"
 	"os"
 	"strings"
@@ -20,7 +21,7 @@ const (
 )
 
 var (
-	logger *log.Entry
+	logger *zap.Logger
 )
 
 func TestFileText(t *testing.T) {
@@ -163,9 +164,23 @@ func getS3OutputObject(fileName, contentType string) *s3.GetObjectOutput {
 	return &obj
 }
 
-func setUpTest(logType string) *log.Entry {
-	log.SetLevel(log.DebugLevel)
-	logger = log.WithFields(log.Fields{"agent": "test"})
+func setUpTest(logType string) *zap.Logger {
+	cfg := zap.Config{
+		Encoding:         "json",
+		Level:            zap.NewAtomicLevelAt(zapcore.DebugLevel),
+		OutputPaths:      []string{"stdout"},
+		ErrorOutputPaths: []string{"stderr"},
+		EncoderConfig: zapcore.EncoderConfig{
+			MessageKey:   "message",
+			LevelKey:     "level",
+			EncodeLevel:  zapcore.CapitalLevelEncoder,
+			TimeKey:      "time",
+			EncodeTime:   zapcore.ISO8601TimeEncoder,
+			CallerKey:    "caller",
+			EncodeCaller: zapcore.ShortCallerEncoder,
+		},
+	}
+	logger, _ = cfg.Build()
 	os.Setenv(envLogType, logType)
 	return logger
 }
