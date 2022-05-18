@@ -4,7 +4,7 @@ This project creates an AWS Lambda function that sends logs from files stored in
 
 ## Instructions:
 
-To deploy this project, click the button that matched the region you wish to deploy your Stack to:
+To deploy this project, click the button that matches the region you wish to deploy your Stack to:
 
 | Region | Deployment                                                                                                                                                                                                                                                                                                               |
 | --- |--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -66,7 +66,7 @@ Confirm the checkbox, and click **Add*.
 ### 6. Send logs
 
 That's it. Your function is configured.
-Once you'll upload new files to your bucket, it will trigger the function, and the logs will be sent to your Logz.io account.
+Once you upload new files to your bucket, it will trigger the function, and the logs will be sent to your Logz.io account.
 
 ## Changelog
 
