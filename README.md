@@ -8,7 +8,7 @@ To deploy this project, click the button that matches the region you wish to dep
 
 | Region           | Deployment                                                                                                                                                                                                                                                                                                                         |
 |------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `us-east-1`      | [![Deploy to AWS](https://dytvr9ot2sszz.cloudfront.net/logz-docs/lights/LightS-button.png)](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/template?templateURL=https://logzio-aws-integrations-us-east-1.s3.amazonaws.com/s3-hook/0.0.1/sam-template.yaml&stackName=logzio-s3-hook)           | 
+| `us-east-1`      | [![Deploy to AWS](https://dytvr9ot2sszz.cloudfront.net/logz-docs/lights/LightS-button.png)](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/template?templateURL=https://logzio-aws-integrations-us-east-1.s3.amazonaws.com/s3-hook/0.0.2/sam-template.yaml&stackName=logzio-s3-hook)           | 
 | `us-east-2`      | [![Deploy to AWS](https://dytvr9ot2sszz.cloudfront.net/logz-docs/lights/LightS-button.png)](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/template?templateURL=https://logzio-aws-integrations-us-east-2.s3.amazonaws.com/s3-hook/0.0.1/sam-template.yaml&stackName=logzio-s3-hook)           | 
 | `us-west-1`      | [![Deploy to AWS](https://dytvr9ot2sszz.cloudfront.net/logz-docs/lights/LightS-button.png)](https://console.aws.amazon.com/cloudformation/home?region=us-west-1#/stacks/create/template?templateURL=https://logzio-aws-integrations-us-west-1.s3.amazonaws.com/s3-hook/0.0.1/sam-template.yaml&stackName=logzio-s3-hook)           | 
 | `us-west-2`      | [![Deploy to AWS](https://dytvr9ot2sszz.cloudfront.net/logz-docs/lights/LightS-button.png)](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/create/template?templateURL=https://logzio-aws-integrations-us-west-2.s3.amazonaws.com/s3-hook/0.0.1/sam-template.yaml&stackName=logzio-s3-hook)           | 
@@ -86,4 +86,6 @@ Once you upload new files to your bucket, it will trigger the function, and the 
 
 ## Changelog
 
+- **0.0.2**:
+  - **Bug fix**: Decodes folder names, for folders with special characters.
 - **0.0.1**: Initial release.

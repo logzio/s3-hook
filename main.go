@@ -7,7 +7,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"go.uber.org/zap"
 	"main/logs_processor"
+	"net/url"
+	"strings"
 )
 
 func HandleRequest(ctx context.Context, s3Event S3Event) {
@@ -25,21 +28,22 @@ func HandleRequest(ctx context.Context, s3Event S3Event) {
 			Region: aws.String(record.AwsRegion)},
 		)
 
+		key := decodeKey(logger, record.S3.Object.Key)
 		if err != nil {
 			logger.Error(fmt.Sprintf("Could not create session for bucket: %s, object: %s. Error: %s. This record will be skipped.",
-				record.S3.Bucket.Name, record.S3.Object.Key, err.Error()))
+				record.S3.Bucket.Name, key, err.Error()))
 			continue
 		}
 
-		object, err := getObjectContent(sess, record.S3.Bucket.Name, record.S3.Object.Key)
+		object, err := getObjectContent(sess, record.S3.Bucket.Name, key)
 		if err != nil {
 			logger.Error(fmt.Sprintf("Could not fetch object %s from bucket %s. Error: %s. This record will be skipped.",
-				record.S3.Object.Key, record.S3.Bucket.Name, err.Error()))
+				key, record.S3.Bucket.Name, err.Error()))
 			continue
 		}
 		logger.Debug(fmt.Sprintf("Got object: %+v", object))
 
-		logs := logs_processor.ProcessLogs(object, logger, record.S3.Object.Key, record.S3.Bucket.Name, record.AwsRegion)
+		logs := logs_processor.ProcessLogs(object, logger, key, record.S3.Bucket.Name, record.AwsRegion)
 		for _, log := range logs {
 			_, err = logzioSender.Write(log)
 			if err != nil {
@@ -63,4 +67,18 @@ func getObjectContent(sess *session.Session, bucketName, key string) (*s3.GetObj
 	object, err := svc.GetObject(&getObjectInput)
 
 	return object, err
+}
+
+func decodeKey(logger *zap.Logger, key string) string {
+	decodedKey, err := url.QueryUnescape(key)
+	if err != nil {
+		logger.Error(fmt.Sprintf("error occurred while trying to unescape the key: %s. Reverting to original key.", err.Error()))
+		return key
+	}
+
+	if strings.ToLower(key) != strings.ToLower(decodedKey) {
+		logger.Debug(fmt.Sprintf("Decoded object key from: %s, to %s", key, decodedKey))
+	}
+
+	return decodedKey
 }
