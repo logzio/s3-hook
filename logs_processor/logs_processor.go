@@ -33,18 +33,9 @@ func ProcessLogs(s3Object *s3.GetObjectOutput, logger *zap.Logger, key, bucket, 
 		return nil
 	}
 
-	logsStr = buf.String()
 	contentType := strings.ToLower(*s3Object.ContentType)
-	if strings.Contains(contentType, "zip") {
-		logger.Debug(fmt.Sprintf("Found a compressed file: %s", contentType))
-		decompressed, err := decompressBody(buf, contentType, logger)
-		if err != nil {
-			logger.Error(fmt.Sprintf("Cannot decompress object %s. Error: %s", key, err.Error()))
-			return nil
-		}
-
-		logsStr = string(decompressed)
-	}
+	logger.Debug(fmt.Sprintf("content type is: %s", contentType))
+	logsStr = getBody(buf, contentType, logger)
 
 	s3Logs := strings.Split(logsStr, "\n")
 	for _, s3Log := range s3Logs {
@@ -62,25 +53,40 @@ func ProcessLogs(s3Object *s3.GetObjectOutput, logger *zap.Logger, key, bucket, 
 	return logs
 }
 
-func decompressBody(buf *bytes.Buffer, contentType string, logger *zap.Logger) ([]byte, error) {
-	switch contentType {
-	case "application/x-gzip":
-		return decompressGzip(buf)
-	default:
-		return decompressZip(buf, logger)
+func getBody(buf *bytes.Buffer, contentType string, logger *zap.Logger) string {
+	// Try to decompress Gzip:
+	tempBuf := *buf
+	body, err := decompressGzip(&tempBuf)
+	if err == nil {
+		logger.Debug("body was Gzipped!")
+		return string(body)
 	}
+
+	logger.Debug(fmt.Sprintf("Error from attempt to decompress gzip: %s", err.Error()))
+	// Try to decompress Zip:
+	tempBuf = *buf
+	body, err = decompressZip(&tempBuf, logger)
+	if err == nil {
+		logger.Debug("body was Zipped!")
+		return string(body)
+	}
+	logger.Debug(fmt.Sprintf("Error from attempt to decompress zip: %s", err.Error()))
+
+	// Returning string as is
+	logger.Debug("Could not decompress gzip or zip, returning the body as is")
+	return buf.String()
 }
 
 func decompressZip(buf *bytes.Buffer, logger *zap.Logger) ([]byte, error) {
 	var decompressed bytes.Buffer
 	body, err := ioutil.ReadAll(buf)
 	if err != nil {
-		logger.Error(err.Error())
+		return nil, err
 	}
 
 	zipReader, err := zip.NewReader(bytes.NewReader(body), int64(len(body)))
 	if err != nil {
-		logger.Error(err.Error())
+		return nil, err
 	}
 
 	// Read all the files from zip archive
@@ -110,11 +116,12 @@ func readZipFile(zf *zip.File) ([]byte, error) {
 
 func decompressGzip(buf *bytes.Buffer) ([]byte, error) {
 	reader, err := gzip.NewReader(buf)
-	defer reader.Close()
 
 	if err != nil {
 		return nil, err
 	}
+
+	defer reader.Close()
 
 	var decompressed bytes.Buffer
 	_, err = decompressed.ReadFrom(reader)

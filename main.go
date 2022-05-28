@@ -46,6 +46,7 @@ func HandleRequest(ctx context.Context, s3Event S3Event) {
 		logs := logs_processor.ProcessLogs(object, logger, key, record.S3.Bucket.Name, record.AwsRegion)
 		for _, log := range logs {
 			_, err = logzioSender.Write(log)
+			logzioSender.Drain()
 			if err != nil {
 				logger.Error(fmt.Sprintf("Encountered error while writing log %s to sender: %s", string(log), err.Error()))
 			}

@@ -74,6 +74,7 @@ func getNewLogzioSender() (*logzio.LogzioSender, error) {
 			logzio.SetinMemoryCapacity(maxBulkSizeBytes), //bytes
 			logzio.SetDrainDuration(time.Second*5),
 			logzio.SetDebug(os.Stdout),
+			logzio.SetCompress(true),
 		)
 	} else {
 		logzioLogger, err = logzio.New(
@@ -83,6 +84,7 @@ func getNewLogzioSender() (*logzio.LogzioSender, error) {
 			logzio.SetDebug(os.Stdout),
 			logzio.SetinMemoryCapacity(maxBulkSizeBytes), //bytes
 			logzio.SetDrainDuration(time.Second*5),
+			logzio.SetCompress(true),
 		)
 	}
 
