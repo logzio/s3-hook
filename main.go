@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"go.uber.org/zap"
 	"main/logs_processor"
+	"main/paths_filter"
 	"net/url"
 	"strings"
 )
@@ -18,6 +19,7 @@ func HandleRequest(ctx context.Context, s3Event S3Event) {
 	logger.Info("Starting handling event...")
 	logger.Debug(fmt.Sprintf("Handling event: %+v", s3Event))
 	logzioSender, err := getNewLogzioSender()
+	pathsToFilterOn := getPathsRegex()
 	defer logzioSender.Drain()
 	if err != nil {
 		logger.Error(fmt.Sprintf("Could not create logzio sender: %s. Exiting.", err.Error()))
@@ -33,6 +35,13 @@ func HandleRequest(ctx context.Context, s3Event S3Event) {
 			logger.Error(fmt.Sprintf("Could not create session for bucket: %s, object: %s. Error: %s. This record will be skipped.",
 				record.S3.Bucket.Name, key, err.Error()))
 			continue
+		}
+
+		if pathsToFilterOn != nil {
+			if !paths_filter.IsIncludePath(key, pathsToFilterOn, logger) {
+				logger.Info(fmt.Sprintf("Key %s does not match any of the paths %v. Skipping it.", key, pathsToFilterOn))
+				continue
+			}
 		}
 
 		object, err := getObjectContent(sess, record.S3.Bucket.Name, key)

@@ -6,6 +6,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -20,6 +21,7 @@ const (
 	envLogLevel       = "LOG_LEVEL"
 	envLogzioToken    = "LOGZIO_TOKEN"
 	envLogzioListener = "LOGZIO_LISTENER"
+	envPathsRegex     = "PATHS_REGEX"
 	maxBulkSizeBytes  = 10 * 1024 * 1024 // 10 MB
 )
 
@@ -128,4 +130,13 @@ func getLogLevel() zapcore.Level {
 	}
 
 	return levelsMap[logLevelStr]
+}
+
+func getPathsRegex() []string {
+	pathsStr := os.Getenv(envPathsRegex)
+	if len(pathsStr) == 0 {
+		return nil
+	}
+
+	return strings.Split(strings.Replace(pathsStr, " ", "", -1), ",")
 }

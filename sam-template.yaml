@@ -41,6 +41,9 @@ Parameters:
       - error
       - fatal
       - panic
+  pathsRegex:
+    Type: String
+    Description: "Comma-seperated list of regex that match the paths you'd like to pull logs from."
 Outputs:
   LogzioS3HookLambda:
     Description: "Logz.io S3 hook lambda ARN"
@@ -54,7 +57,7 @@ Resources:
       Handler: main
       CodeUri:
         Bucket: logzio-aws-integrations-us-east-1
-        Key: s3-hook/0.0.2/function.zip
+        Key: s3-hook/0.1.0/function.zip
       FunctionName: logzio-s3-hook
       MemorySize: 512
       Timeout: 60
@@ -65,6 +68,7 @@ Resources:
           LOGZIO_LISTENER: !Ref logzioListener
           LOG_TYPE: !Ref logType
           LOG_LEVEL: !Ref logLevel
+          PATHS_REGEX: !Ref pathsRegex
   S3HookIamRole:
     Type: "AWS::IAM::Role"
     Properties:

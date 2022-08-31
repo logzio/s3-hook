@@ -14,12 +14,13 @@ import (
 )
 
 const (
-	fieldType      = "type"
-	fieldMessage   = "message"
-	fieldS3Key     = "s3_object_key"
-	fieldAwsRegion = "aws_region"
-	defaultLogType = "s3_hook"
-	envLogType     = "LOG_TYPE"
+	fieldType              = "type"
+	fieldMessage           = "message"
+	fieldS3Key             = "s3_object_key"
+	fieldAwsRegion         = "aws_region"
+	defaultLogType         = "s3_hook"
+	envLogType             = "LOG_TYPE"
+	envControlTowerParsing = "CONTROL_TOWER_PARSING"
 )
 
 func ProcessLogs(s3Object *s3.GetObjectOutput, logger *zap.Logger, key, bucket, awsRegion string) [][]byte {
