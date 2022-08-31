@@ -89,6 +89,7 @@ Once you upload new files to your bucket, it will trigger the function, and the 
 
 If there are specific paths within you bucket that you want to pull logs from, you can use the `pathsRegex` variable.
 This variable should hold a comma seperated list of regexes that match the paths you wish to extract logs from.
+**Note**: this will still trigger you Lambda function everytime a new object will be added to your bucket, but if the key does not match the regexes, the function will quit and won't send the logs.
 
 ## Changelog
 
