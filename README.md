@@ -43,7 +43,7 @@ Specify the stack details as per the table below and select **Next**.
 | `logzioToken`    | Your Logz.io log shipping token.                                                                                                                  | **Required**       |
 | `logLevel`       | Log level for the Lambda function. Can be one of: `debug`, `info`, `warn`, `error`, `fatal`, `panic`.                                             | Default: `info`    |
 | `logType`        | The log type you'll use with this Lambda. This is shown in your logs under the type field in Kibana. Logz.io applies parsing based on type.       | Default: `s3_hook` |
-| `pathsRegex`     | Comma-seperated list of regex that match the paths you'd like to pull logs from                                                                   | -                  |
+| `  pathsRegexes` | Comma-seperated list of regexes that match the paths you'd like to pull logs from                                                                 | -                  |
 
 
 ![Step 2 screenshot](img/02.png)
@@ -85,10 +85,15 @@ Confirm the checkbox, and click **Add*.
 That's it. Your function is configured.
 Once you upload new files to your bucket, it will trigger the function, and the logs will be sent to your Logz.io account.
 
+#### Filtering files
+
+If there are specific paths within you bucket that you want to pull logs from, you can use the `pathsRegex` variable.
+This variable should hold a comma seperated list of regexes that match the paths you wish to extract logs from.
+
 ## Changelog
 
 - **0.1.0**:
-  - Add ability to filter paths with regex list in field `pathsRegex`.
+  - Add ability to filter paths with regex list in field `pathsRegexes`.
 - **0.0.2**:
   - **Bug fix**: Decodes folder names, for folders with special characters.
 - **0.0.1**: Initial release.

@@ -6,11 +6,11 @@ import (
 	"regexp"
 )
 
-func IsIncludePath(path string, pathsRegex []string, logger *zap.Logger) bool {
-	for _, pathRegex := range pathsRegex {
+func IsIncludePath(path string, pathsRegexes []string, logger *zap.Logger) bool {
+	for _, pathRegex := range pathsRegexes {
 		matched, err := regexp.MatchString(fmt.Sprintf(`%s`, pathRegex), path)
 		if err != nil {
-			logger.Error(fmt.Sprintf("Error occurred while trying to paths_filter path: %s", err.Error()))
+			logger.Error(fmt.Sprintf("Error occurred while trying to match path to regexes list: %s", err.Error()))
 		}
 
 		if matched {

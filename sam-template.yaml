@@ -41,7 +41,7 @@ Parameters:
       - error
       - fatal
       - panic
-  pathsRegex:
+  pathsRegexes:
     Type: String
     Description: "Comma-seperated list of regex that match the paths you'd like to pull logs from."
 Outputs:
@@ -68,7 +68,7 @@ Resources:
           LOGZIO_LISTENER: !Ref logzioListener
           LOG_TYPE: !Ref logType
           LOG_LEVEL: !Ref logLevel
-          PATHS_REGEX: !Ref pathsRegex
+          PATHS_REGEXES: !Ref pathsRegexes
   S3HookIamRole:
     Type: "AWS::IAM::Role"
     Properties:
