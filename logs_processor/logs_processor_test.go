@@ -140,6 +140,31 @@ func TestFileJson(t *testing.T) {
 	}
 }
 
+func TestControlTowerParsing(t *testing.T) {
+	logType := "from-control-tower"
+	logger = setUpTest(logType)
+	fileName := "test.txt"
+	contentType := "text/plain"
+	orgId := "o-Owji3jed34j"
+	awsType := "AWSLogs"
+	accountId := "328478728391"
+	os.Setenv(envPathToFields, "org-id/aws-type/account-id")
+	s3GetObject := getS3OutputObject(fileName, contentType)
+	logs := ProcessLogs(s3GetObject, logger, fmt.Sprintf("%s/%s/%s/%s", orgId, awsType, accountId, fileName), testBucketName, testAwsRegion)
+	assert.NotNil(t, logs)
+	for index, logzioLog := range logs {
+		var tmp map[string]interface{}
+		err := json.Unmarshal(logzioLog, &tmp)
+		assert.NoError(t, err)
+		assert.Equal(t, fmt.Sprintf("I AM A LOG FROM TXT FILE %d", index+1), tmp[fieldMessage])
+		assert.Equal(t, logType, tmp[fieldType])
+		assert.Equal(t, testAwsRegion, tmp[fieldAwsRegion])
+		assert.Equal(t, orgId, tmp["org-id"])
+		assert.Equal(t, awsType, tmp["aws-type"])
+		assert.Equal(t, accountId, tmp["account-id"])
+	}
+}
+
 func getLogFile(fileName string) string {
 	b, err := os.ReadFile("test_logs/" + fileName)
 	if err != nil {

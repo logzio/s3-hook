@@ -44,6 +44,9 @@ Parameters:
   pathsRegexes:
     Type: String
     Description: "Comma-seperated list of regex that match the paths you'd like to pull logs from."
+  pathToFields:
+    Type: String
+    Description: "TODO"
 Outputs:
   LogzioS3HookLambda:
     Description: "Logz.io S3 hook lambda ARN"
@@ -69,6 +72,7 @@ Resources:
           LOG_TYPE: !Ref logType
           LOG_LEVEL: !Ref logLevel
           PATHS_REGEXES: !Ref pathsRegexes
+          PATH_TO_FIELDS: !Ref pathToFields
   S3HookIamRole:
     Type: "AWS::IAM::Role"
     Properties:

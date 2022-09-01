@@ -9,18 +9,15 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"go.uber.org/zap"
 	"io/ioutil"
-	"os"
 	"strings"
 )
 
 const (
-	fieldType              = "type"
-	fieldMessage           = "message"
-	fieldS3Key             = "s3_object_key"
-	fieldAwsRegion         = "aws_region"
-	defaultLogType         = "s3_hook"
-	envLogType             = "LOG_TYPE"
-	envControlTowerParsing = "CONTROL_TOWER_PARSING"
+	fieldType      = "type"
+	fieldMessage   = "message"
+	fieldS3Key     = "s3_object_key"
+	fieldAwsRegion = "aws_region"
+	defaultLogType = "s3_hook"
 )
 
 func ProcessLogs(s3Object *s3.GetObjectOutput, logger *zap.Logger, key, bucket, awsRegion string) [][]byte {
@@ -34,13 +31,15 @@ func ProcessLogs(s3Object *s3.GetObjectOutput, logger *zap.Logger, key, bucket, 
 		return nil
 	}
 
+	controlTowerParsing := getControlTowerParsing()
+
 	contentType := strings.ToLower(*s3Object.ContentType)
 	logger.Debug(fmt.Sprintf("content type is: %s", contentType))
 	logsStr = getBody(buf, contentType, logger)
 
 	s3Logs := strings.Split(logsStr, "\n")
 	for _, s3Log := range s3Logs {
-		logBytes, err := convertToLogzioLog(s3Log, bucket, key, awsRegion, logger)
+		logBytes, err := convertToLogzioLog(s3Log, bucket, key, awsRegion, controlTowerParsing, logger)
 		if err != nil {
 			continue
 		}
@@ -133,7 +132,7 @@ func decompressGzip(buf *bytes.Buffer) ([]byte, error) {
 	return decompressed.Bytes(), nil
 }
 
-func convertToLogzioLog(s3Log, bucket, key, awsRegion string, logger *zap.Logger) ([]byte, error) {
+func convertToLogzioLog(s3Log, bucket, key, awsRegion, controlTowerParsing string, logger *zap.Logger) ([]byte, error) {
 	logger.Debug(fmt.Sprintf("Converting log: %s", s3Log))
 	if len(s3Log) == 0 {
 		return nil, nil
@@ -144,6 +143,9 @@ func convertToLogzioLog(s3Log, bucket, key, awsRegion string, logger *zap.Logger
 	logzioLog[fieldS3Key] = objFullPath
 	logzioLog[fieldAwsRegion] = awsRegion
 	logzioLog[fieldMessage] = s3Log
+	if len(controlTowerParsing) > 0 {
+		addControlTowerParsing(controlTowerParsing, key, logzioLog, logger)
+	}
 
 	logBytes, err := json.Marshal(logzioLog)
 	if err != nil {
@@ -153,11 +155,13 @@ func convertToLogzioLog(s3Log, bucket, key, awsRegion string, logger *zap.Logger
 	return logBytes, err
 }
 
-func getLogType() string {
-	logType := os.Getenv(envLogType)
-	if len(logType) == 0 {
-		logType = defaultLogType
-	}
+func addControlTowerParsing(controlTowerParsing, objectKey string, log map[string]interface{}, logger *zap.Logger) {
+	parsingKeys := strings.Split(controlTowerParsing, "/")
+	logger.Debug(fmt.Sprintf("received from user %d keys to add to log: %v", len(parsingKeys), parsingKeys))
+	parsingValues := strings.Split(objectKey, "/")
 
-	return logType
+	for index, pk := range parsingKeys {
+		logger.Debug(fmt.Sprintf("Adding key: %s with value %s", pk, parsingValues[index]))
+		log[pk] = parsingValues[index]
+	}
 }
