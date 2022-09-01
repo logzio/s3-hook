@@ -44,7 +44,7 @@ Specify the stack details as per the table below and select **Next**.
 | `logLevel`       | Log level for the Lambda function. Can be one of: `debug`, `info`, `warn`, `error`, `fatal`, `panic`.                                               | Default: `info`    |
 | `logType`        | The log type you'll use with this Lambda. This is shown in your logs under the type field in Kibana. Logz.io applies parsing based on the log type. | Default: `s3_hook` |
 | `pathsRegexes`   | Comma-seperated list of regexes that match the paths you'd like to pull logs from.                                                                  | -                  |
-| `pathToFields`   | TODO                                                                                                                                                | -                  |
+| `pathToFields`   | Fields from the path to your logs directory that you want to add to the logs. For example, `org-id/aws-type/account-id` will add each of the fields `ord-id`, `was-type` and `account-id` to the logs that are fetched from the directory that this path refers to.                                                                                                                                                | -                  |
 
 ![Step 2 screenshot](img/02.png)
 
