@@ -46,6 +46,7 @@ Specify the stack details as per the table below and select **Next**.
 | `pathsRegexes`   | Comma-seperated list of regexes that match the paths you'd like to pull logs from.                                                                  | -                  |
 | `pathToFields`   | Fields from the path to your logs directory that you want to add to the logs. For example, `org-id/aws-type/account-id` will add each of the fields `ord-id`, `was-type` and `account-id` to the logs that are fetched from the directory that this path refers to.                                                                                                                                                | -                  |
 
+
 ![Step 2 screenshot](img/02.png)
 
 ### 3. Configure stack options
@@ -91,6 +92,7 @@ If there are specific paths within the bucket that you want to pull logs from, y
 This variable should hold a comma-seperated list of regexes that match the paths you wish to extract logs from.
 **Note**: this will still trigger your Lambda function every time a new object is added to your bucket. However, if the key does not match the regexes, the function will quit and won't send the logs.
 
+
 #### Adding object path as logs field
 
 In case you want to use your objects' path as extra fields in your logs, you can do so by using `pathToFields`.
@@ -104,6 +106,8 @@ Setting `pathToFields` with the value: `org-id/aws-type/account-id` will add to 
 
 1. This will override a field with the same key, if it exists.
 2. In order for the feature to work, you need to set `pathToFields` from the root of the bucket.
+
+
 
 ## Changelog
 
