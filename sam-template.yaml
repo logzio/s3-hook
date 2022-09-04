@@ -46,7 +46,7 @@ Parameters:
     Description: "Comma-seperated list of regex that match the paths you'd like to pull logs from."
   pathToFields:
     Type: String
-    Description: "TODO"
+    Description: "Fields from the path to your logs directory that you want to add to the logs. For example, `org-id/aws-type/account-id` will add each of the fields `ord-id`, `was-type` and `account-id` to the logs that are fetched from the directory that this path refers to."
 Outputs:
   LogzioS3HookLambda:
     Description: "Logz.io S3 hook lambda ARN"
