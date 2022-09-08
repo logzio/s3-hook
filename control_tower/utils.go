@@ -14,8 +14,8 @@ const (
 	LogLevelFatal      = "fatal"
 	LogLevelPanic      = "panic"
 	defaultLogLevel    = LogLevelInfo
-	defaultPolicyName  = "logzioS3Hook"
-	defaultRoleName    = "additionalBuckets"
+	defaultPolicyName  = "LambdaAccessBuckets"
+	defaultRoleName    = "LogzioS3Hook"
 	envLogLevel        = "LOG_LEVEL"
 	envMainFunctionArn = "MAIN_FUNC_ARN"
 	envAccountId       = "ACCOUNT_ID"
@@ -94,4 +94,19 @@ func getRoleName() string {
 	}
 
 	return rn
+}
+
+func getPolicyDocumentBuckets() string {
+	return `{
+	"Version": "2012-10-17",
+	"Statement": [{
+		"Action": [
+			"s3:GetObject"
+		],
+		"Resource": [
+			"arn:aws:s3:::*"
+		],
+		"Effect": "Allow"
+	}]
+}`
 }
