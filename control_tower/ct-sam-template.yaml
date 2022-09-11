@@ -1,0 +1,106 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: "This is an AWS Lambda function for adding newly created buckets as triggers to Logzio's S3 Hook Lambda function."
+Parameters:
+  s3HookArn:
+    Type: String
+    Description: "ARN of your S3 Hook Lambda function"
+  logLevel:
+    Type: String
+    Description: "Log level for the Lambda function. Can be one of: debug, info, warn, error, fatal, panic."
+    Default: info
+    AllowedValues:
+      - debug
+      - info
+      - warn
+      - error
+      - fatal
+      - panic
+
+Resources:
+  LogzioControlTowerLambda:
+    DependsOn: ControlTowerLambdaRole
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Runtime: go1.x
+      Handler: main
+      CodeUri:
+        Bucket: logzio-aws-integrations-us-east-1
+        Key: s3-hook/control-tower/0.0.1/function.zip
+      FunctionName: logzio-control-tower
+      MemorySize: 512
+      Timeout: 60
+      Role: !GetAtt ControlTowerLambdaRole.Arn
+      Environment:
+        Variables:
+          MAIN_FUNC_ARN: !Ref s3HookArn
+          LOG_LEVEL: !Ref logLevel
+  ControlTowerLambdaRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: ControlTowerLambdaRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: ControlTowerLambdaPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:*'
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'lambda:AddPermission'
+                Resource:
+                  - !Ref s3HookArn
+              - Effect: Allow
+                Action:
+                  - 'iam:CreatePolicy'
+                  - 's3:PutBucketNotification'
+                  - 'iam:AttachRolePolicy'
+                  - 'iam:GetRolePolicy'
+                Resource:
+                  - '*'
+  BucketCreationEvent:
+    DependsOn: LogzioControlTowerLambda
+    Type: AWS::Events::Rule
+    Properties:
+      Description: "This event is triggered by the creation of a new S3 bucket, and triggers the Control Tower Lambda function."
+      EventPattern:
+        source:
+          - 'aws.s3'
+        detail-type:
+          - 'AWS API Call via CloudTrail'
+        detail:
+          eventSource:
+            - 's3.amazonaws.com'
+          eventName:
+            - 'CreateBucket'
+      Name: CreateBucketLambdaTrigger
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt LogzioControlTowerLambda.Arn
+          Id: 'LogzioControlTowerLambdaFunction'
+  PermissionForEventsToInvokeLambda:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref LogzioControlTowerLambda
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn: !GetAtt BucketCreationEvent.Arn
