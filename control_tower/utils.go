@@ -18,7 +18,6 @@ const (
 	defaultRoleName    = "LogzioS3Hook"
 	envLogLevel        = "LOG_LEVEL"
 	envMainFunctionArn = "MAIN_FUNC_ARN"
-	envAccountId       = "ACCOUNT_ID"
 	envPolicyName      = "POLICY_NAME"
 	envRoleName        = "ROLE_NAME"
 )
@@ -72,10 +71,6 @@ func getLogLevel() zapcore.Level {
 
 func getMainFunctionArn() string {
 	return os.Getenv(envMainFunctionArn)
-}
-
-func getAccountId() string {
-	return os.Getenv(envAccountId)
 }
 
 func getPolicyName() string {

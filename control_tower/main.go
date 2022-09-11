@@ -13,15 +13,23 @@ import (
 	"strings"
 )
 
+var (
+	accountId string
+	partition string
+	funcName  string
+)
+
 func HandleRequest(ctx context.Context, ebEvent EventbridgeEvent) {
 	logger := getLogger()
 	logger.Info("Starting handling event...")
 	logger.Debug(fmt.Sprintf("Handling event: %+v", ebEvent))
 
-	bucketName, awsRegion, mainFunctionArn, accountId := getTriggerDetails(ebEvent, logger)
+	bucketName, awsRegion, mainFunctionArn := getTriggerDetails(ebEvent, logger)
 	if len(bucketName) == 0 || len(awsRegion) == 0 || len(mainFunctionArn) == 0 {
 		return
 	}
+
+	extractInfoFromMainFuncArn(mainFunctionArn, logger)
 
 	sess := getSession(awsRegion, logger)
 	if sess == nil {
@@ -34,7 +42,7 @@ func HandleRequest(ctx context.Context, ebEvent EventbridgeEvent) {
 		return
 	}
 
-	err = addMainLambdaInvokePermission(bucketName, accountId, mainFunctionArn, sess, logger)
+	err = addMainLambdaInvokePermission(bucketName, sess, logger)
 	if err != nil {
 		logger.Error(err.Error())
 		return
@@ -84,12 +92,8 @@ func grantBucketsPermission(iamClient *iam.IAM, mainFuncArn string, logger *zap.
 	return nil
 }
 
-func buildPolicyArn(mainFuncArn string) string {
-	// Lambda function arn is in the following format: arn:<partition>:lambda:<region>:<accountId>:function:<funcName>
-	funcArnSlice := strings.Split(mainFuncArn, ":")
-	partitionIndex := 1
-	accountIdIndex := 4
-	return fmt.Sprintf("arn:%s:iam::%s:policy/%s", funcArnSlice[partitionIndex], funcArnSlice[accountIdIndex], getPolicyName())
+func buildPolicyArn() string {
+	return fmt.Sprintf("arn:%s:iam::%s:policy/%s", partition, accountId, getPolicyName())
 }
 
 func createPolicy(iamClient *iam.IAM, mainFuncArn string, logger *zap.Logger) (*string, error) {
@@ -102,7 +106,7 @@ func createPolicy(iamClient *iam.IAM, mainFuncArn string, logger *zap.Logger) (*
 	if err != nil {
 		if strings.Contains(err.Error(), "status code: 409") {
 			logger.Info("policy already exists")
-			arn := buildPolicyArn(mainFuncArn)
+			arn := buildPolicyArn()
 			return &arn, nil
 		}
 		return nil, fmt.Errorf("error occurred while trying to create policy: %s", err.Error())
@@ -153,39 +157,32 @@ func main() {
 	lambda.Start(HandleRequest)
 }
 
-func getTriggerDetails(ebEvent EventbridgeEvent, logger *zap.Logger) (string, string, string, string) {
+func getTriggerDetails(ebEvent EventbridgeEvent, logger *zap.Logger) (string, string, string) {
 	bucketName := ebEvent.Detail.RequestParameters.BucketName
 	if len(bucketName) == 0 {
 		logger.Error("Could not find created bucket name. Aborting")
-		return "", "", "", ""
+		return "", "", ""
 	}
 
 	awsRegion := ebEvent.Region
 	if len(awsRegion) == 0 {
 		logger.Error("Could not find aws region. Aborting")
-		return "", "", "", ""
+		return "", "", ""
 
 	}
 
 	mainFunctionArn := getMainFunctionArn()
 	if len(mainFunctionArn) == 0 {
 		logger.Error(fmt.Sprintf("env var %s not specified. Aborting", envMainFunctionArn))
-		return "", "", "", ""
+		return "", "", ""
 
-	}
-
-	accountId := getAccountId()
-	if len(accountId) == 0 {
-		logger.Error(fmt.Sprintf("env var %s not specified. Aborting", envAccountId))
-		return "", "", "", ""
 	}
 
 	logger.Debug(fmt.Sprintf("detected bucket name: %s", bucketName))
 	logger.Debug(fmt.Sprintf("detected aws region: %s", awsRegion))
 	logger.Debug(fmt.Sprintf("detected main function arn: %s", mainFunctionArn))
-	logger.Debug(fmt.Sprintf("detected account id: %s", accountId))
 
-	return bucketName, awsRegion, mainFunctionArn, accountId
+	return bucketName, awsRegion, mainFunctionArn
 }
 
 func getSession(awsRegion string, logger *zap.Logger) *session.Session {
@@ -219,13 +216,12 @@ func addNotificationConfiguration(bucketName, awsRegion, mainFunctionArn string,
 	return nil
 }
 
-func addMainLambdaInvokePermission(bucketName, accountId, mainFunctionArn string, sess *session.Session, logger *zap.Logger) error {
+func addMainLambdaInvokePermission(bucketName string, sess *session.Session, logger *zap.Logger) error {
 	lambdaClient := l.New(sess)
 	if lambdaClient == nil {
 		return fmt.Errorf("could not create lambda client. Aborting")
 	}
 
-	funcName := extractFuncNameFromArn(mainFunctionArn, logger)
 	permReq := createAddPermissionsInput(bucketName, &accountId, &funcName)
 	permRes, err := lambdaClient.AddPermission(permReq)
 	if err != nil {
@@ -236,10 +232,17 @@ func addMainLambdaInvokePermission(bucketName, accountId, mainFunctionArn string
 	return nil
 }
 
-func extractFuncNameFromArn(lambdaArn string, logger *zap.Logger) string {
-	arnSlice := strings.Split(lambdaArn, ":")
+func extractInfoFromMainFuncArn(mainFuncArn string, logger *zap.Logger) {
 	// Lambda function arn is in the following format: arn:<partition>:lambda:<region>:<accountId>:function:<funcName>
-	funcName := arnSlice[len(arnSlice)-1]
-	logger.Debug(fmt.Sprintf("extracted function name: %s from %s", funcName, lambdaArn))
-	return funcName
+	funcArnSlice := strings.Split(mainFuncArn, ":")
+	partitionIndex := 1
+	accountIdIndex := 4
+	funcNameIndex := len(funcArnSlice) - 1
+	partition = funcArnSlice[partitionIndex]
+	logger.Info(fmt.Sprintf("using as partition: %s", partition))
+	accountId = funcArnSlice[accountIdIndex]
+	logger.Info(fmt.Sprintf("using as acocunt id: %s", accountId))
+	funcName = funcArnSlice[funcNameIndex]
+	logger.Info(fmt.Sprintf("using as s3 hook function name: %s", funcName))
+	return
 }
