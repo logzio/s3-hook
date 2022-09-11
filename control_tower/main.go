@@ -14,9 +14,6 @@ import (
 )
 
 func HandleRequest(ctx context.Context, ebEvent EventbridgeEvent) {
-	// TODO: wrap each call to aws in retry
-	// TODO: improve logs. specify bucket names where applicable
-	// TODO: cleanup if a stage failed
 	logger := getLogger()
 	logger.Info("Starting handling event...")
 	logger.Debug(fmt.Sprintf("Handling event: %+v", ebEvent))
@@ -31,7 +28,7 @@ func HandleRequest(ctx context.Context, ebEvent EventbridgeEvent) {
 		return
 	}
 
-	err := manageBucketsPermissions(bucketName, mainFunctionArn, sess, logger)
+	err := manageBucketsPermissions(mainFunctionArn, sess, logger)
 	if err != nil {
 		logger.Error(err.Error())
 		return
@@ -46,30 +43,24 @@ func HandleRequest(ctx context.Context, ebEvent EventbridgeEvent) {
 	err = addNotificationConfiguration(bucketName, awsRegion, mainFunctionArn, sess, logger)
 	if err != nil {
 		logger.Error(err.Error())
-		err = removePermissions(bucketName, mainFunctionArn, sess, logger)
-		if err != nil {
-			logger.Error(err.Error())
-			return
-		}
-
 		return
 	}
 
 	logger.Info(fmt.Sprintf("Successfully added permissions and trigger to function %s and bucket %s", mainFunctionArn, bucketName))
 }
 
-func manageBucketsPermissions(bucketName string, mainFuncArn string, sess *session.Session, logger *zap.Logger) error {
+func manageBucketsPermissions(mainFuncArn string, sess *session.Session, logger *zap.Logger) error {
 	iamClient := iam.New(sess)
 	if iamClient == nil {
 		return fmt.Errorf("could not create IAM client. Aborting")
 	}
 
-	policyExists, err := isPolicyExists(iamClient, logger)
+	policyAttached, err := isPolicyAttached(iamClient, logger)
 	if err != nil {
 		return err
 	}
 
-	if !policyExists {
+	if !policyAttached {
 		err = grantBucketsPermission(iamClient, mainFuncArn, logger)
 		if err != nil {
 			return err
@@ -80,7 +71,7 @@ func manageBucketsPermissions(bucketName string, mainFuncArn string, sess *sessi
 }
 
 func grantBucketsPermission(iamClient *iam.IAM, mainFuncArn string, logger *zap.Logger) error {
-	policyArn, err := createPolicy(iamClient, logger)
+	policyArn, err := createPolicy(iamClient, mainFuncArn, logger)
 	if err != nil {
 		return err
 	}
@@ -93,19 +84,27 @@ func grantBucketsPermission(iamClient *iam.IAM, mainFuncArn string, logger *zap.
 	return nil
 }
 
-func createPolicy(iamClient *iam.IAM, logger *zap.Logger) (*string, error) {
+func buildPolicyArn(mainFuncArn string) string {
+	// Lambda function arn is in the following format: arn:<partition>:lambda:<region>:<accountId>:function:<funcName>
+	funcArnSlice := strings.Split(mainFuncArn, ":")
+	partitionIndex := 1
+	accountIdIndex := 4
+	return fmt.Sprintf("arn:%s:iam::%s:policy/%s", funcArnSlice[partitionIndex], funcArnSlice[accountIdIndex], getPolicyName())
+}
+
+func createPolicy(iamClient *iam.IAM, mainFuncArn string, logger *zap.Logger) (*string, error) {
 	policyName := getPolicyName()
 	description := "Policy for allowing the function perform GetObject on created buckets"
 	policyDocument := getPolicyDocumentBuckets()
-	createPolicyReq := iam.CreatePolicyInput{
-		Description:    &description,
-		PolicyDocument: &policyDocument,
-		PolicyName:     &policyName,
-	}
-
+	createPolicyReq := createCreatePolicyInput(&description, &policyDocument, &policyName)
 	logger.Debug(fmt.Sprintf("request for create policy: %s", createPolicyReq.String()))
-	createPolicyRes, err := iamClient.CreatePolicy(&createPolicyReq)
+	createPolicyRes, err := iamClient.CreatePolicy(createPolicyReq)
 	if err != nil {
+		if strings.Contains(err.Error(), "status code: 409") {
+			logger.Info("policy already exists")
+			arn := buildPolicyArn(mainFuncArn)
+			return &arn, nil
+		}
 		return nil, fmt.Errorf("error occurred while trying to create policy: %s", err.Error())
 	}
 
@@ -118,7 +117,8 @@ func createPolicy(iamClient *iam.IAM, logger *zap.Logger) (*string, error) {
 }
 
 func attachPolicyToRole(iamClient *iam.IAM, policyArn *string, logger *zap.Logger) error {
-	attachPolicyReq := createAttachPolicyRequest(policyArn)
+	roleName := getRoleName()
+	attachPolicyReq := createAttachRolePolicyInput(policyArn, &roleName)
 	attachPolicyRes, err := iamClient.AttachRolePolicy(attachPolicyReq)
 	policyName := getPolicyName()
 	if err != nil {
@@ -129,32 +129,21 @@ func attachPolicyToRole(iamClient *iam.IAM, policyArn *string, logger *zap.Logge
 	return nil
 }
 
-func createAttachPolicyRequest(policyArn *string) *iam.AttachRolePolicyInput {
-	roleName := getRoleName()
-	return &iam.AttachRolePolicyInput{
-		PolicyArn: policyArn,
-		RoleName:  &roleName,
-	}
-}
-
-func isPolicyExists(iamClient *iam.IAM, logger *zap.Logger) (bool, error) {
+func isPolicyAttached(iamClient *iam.IAM, logger *zap.Logger) (bool, error) {
 	roleName := getRoleName()
 	logger.Debug(fmt.Sprintf("detected role name: %s", roleName))
 	policyName := getPolicyName()
 	logger.Debug(fmt.Sprintf("detected policy name: %s", policyName))
-	logger.Debug("SHALOM 1")
-	getPolicyReq := iam.GetRolePolicyInput{RoleName: &roleName, PolicyName: &policyName}
-	_, err := iamClient.GetRolePolicy(&getPolicyReq)
-	logger.Debug("SHALOM 2")
+	getPolicyReq := createGetRolePolicyInput(&roleName, &policyName)
+	_, err := iamClient.GetRolePolicy(getPolicyReq)
 	if err != nil {
 		if strings.Contains(err.Error(), "status code: 404") {
-			logger.Info(fmt.Sprintf("could not find policy with name %s, will create a new one", policyName))
+			logger.Info(fmt.Sprintf("could not find policy with name %s attached to role %s, will create a new one if necessary", policyName, roleName))
 			return false, nil
 		}
 
 		return false, fmt.Errorf("error occurred while trying to get role policy for lambda function: %s", err.Error())
 	}
-	logger.Debug("SHALOM 3")
 
 	logger.Info("s3-hook function contains required policy for buckets")
 	return true, nil
@@ -214,29 +203,13 @@ func getSession(awsRegion string, logger *zap.Logger) *session.Session {
 	return sess
 }
 
-func createBucketNotificationConfigInput(bucketName, mainFuncArn string) *s3.PutBucketNotificationConfigurationInput {
-	desiredEvent := "s3:ObjectCreated:*"
-	lambdaConfig := s3.LambdaFunctionConfiguration{
-		Events:            []*string{&desiredEvent},
-		LambdaFunctionArn: &mainFuncArn,
-	}
-	notificationConfig := s3.NotificationConfiguration{
-		LambdaFunctionConfigurations: []*s3.LambdaFunctionConfiguration{&lambdaConfig},
-	}
-
-	return &s3.PutBucketNotificationConfigurationInput{
-		Bucket:                    &bucketName,
-		NotificationConfiguration: &notificationConfig,
-	}
-}
-
 func addNotificationConfiguration(bucketName, awsRegion, mainFunctionArn string, sess *session.Session, logger *zap.Logger) error {
 	s3Client := s3.New(sess)
 	if s3Client == nil {
 		return fmt.Errorf("could not create s3 client. Will delete the added lambda permision and abort")
 	}
 
-	bucketNotificationConfigInput := createBucketNotificationConfigInput(bucketName, mainFunctionArn)
+	bucketNotificationConfigInput := createPutBucketNotificationConfigurationInput(bucketName, mainFunctionArn)
 	bucketNotificationConfigOutput, err := s3Client.PutBucketNotificationConfiguration(bucketNotificationConfigInput)
 	if err != nil {
 		return fmt.Errorf("error occurred while trying to add bucket notification configuration: %s", err.Error())
@@ -253,7 +226,7 @@ func addMainLambdaInvokePermission(bucketName, accountId, mainFunctionArn string
 	}
 
 	funcName := extractFuncNameFromArn(mainFunctionArn, logger)
-	permReq := getAddPermissionsRequest(bucketName, accountId, funcName)
+	permReq := createAddPermissionsInput(bucketName, &accountId, &funcName)
 	permRes, err := lambdaClient.AddPermission(permReq)
 	if err != nil {
 		return fmt.Errorf("error occurred while trying to add permission to lambda function: %s", err.Error())
@@ -269,44 +242,4 @@ func extractFuncNameFromArn(lambdaArn string, logger *zap.Logger) string {
 	funcName := arnSlice[len(arnSlice)-1]
 	logger.Debug(fmt.Sprintf("extracted function name: %s from %s", funcName, lambdaArn))
 	return funcName
-}
-
-func getAddPermissionsRequest(bucketName, accountId, functionName string) *l.AddPermissionInput {
-	principal := "s3.amazonaws.com"
-	statementId := fmt.Sprintf("bucket-invoke-%s", bucketName)
-	bucketArn := fmt.Sprintf("arn:aws:s3:::%s", bucketName)
-	action := "lambda:InvokeFunction"
-	return &l.AddPermissionInput{
-		Action:        &action,
-		FunctionName:  &functionName,
-		Principal:     &principal,
-		SourceAccount: &accountId,
-		SourceArn:     &bucketArn,
-		StatementId:   &statementId,
-	}
-}
-
-func getRemovePermissionsRequest(bucketName, functionName string) *l.RemovePermissionInput {
-	statementId := fmt.Sprintf("bucket-invoke-%s", bucketName)
-	return &l.RemovePermissionInput{
-		FunctionName: &functionName,
-		StatementId:  &statementId,
-	}
-}
-
-func removePermissions(bucketName, mainFunctionArn string, sess *session.Session, logger *zap.Logger) error {
-	lambdaClient := l.New(sess)
-	if lambdaClient == nil {
-		return fmt.Errorf("could not create lambda client. Aborting")
-	}
-
-	funcName := extractFuncNameFromArn(mainFunctionArn, logger)
-	removePermReq := getRemovePermissionsRequest(bucketName, funcName)
-	removePermRes, err := lambdaClient.RemovePermission(removePermReq)
-	if err != nil {
-		return fmt.Errorf("error occurred while trying to remove permissions: %s", err)
-	}
-
-	logger.Debug(fmt.Sprintf("response from RemovePermissions: %s", removePermRes.String()))
-	return nil
 }
