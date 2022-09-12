@@ -107,13 +107,17 @@ Setting `pathToFields` with the value: `org-id/aws-type/account-id` will add to 
 1. This will override a field with the same key, if it exists.
 2. In order for the feature to work, you need to set `pathToFields` from the root of the bucket.
 
+#### Control Tower support:
 
+If you want to ship Control Tower logs, after deploying the S3 Hook stack, you'll need to deploy additional stack.
+For more details [click here](https://github.com/logzio/s3-hook/tree/master/control_tower).
 
 ## Changelog
 
 - **0.1.0**:
   - Add ability to filter paths with regex list in field `pathsRegexes`.
   - Add ability to map bucket path as log fields with `pathToFields`.
+  - Add support for Control Tower.
 - **0.0.2**:
   - **Bug fix**: Decodes folder names, for folders with special characters.
 - **0.0.1**: Initial release.
