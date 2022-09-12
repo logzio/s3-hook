@@ -26,42 +26,23 @@ To deploy this project, click the button that matches the region you wish to dep
 | `ap-southeast-2` | [![Deploy to AWS](https://dytvr9ot2sszz.cloudfront.net/logz-docs/lights/LightS-button.png)](https://console.aws.amazon.com/cloudformation/home?region=ap-southeast-2#/stacks/create/review?templateURL=https://logzio-aws-integrations-ap-southeast-2.s3.amazonaws.com/s3-hook/0.1.0/sam-template.yaml&stackName=logzio-s3-hook) | 
 | `ca-central-1`   | [![Deploy to AWS](https://dytvr9ot2sszz.cloudfront.net/logz-docs/lights/LightS-button.png)](https://console.aws.amazon.com/cloudformation/home?region=ca-central-1#/stacks/create/review?templateURL=https://logzio-aws-integrations-ca-central-1.s3.amazonaws.com/s3-hook/0.1.0/sam-template.yaml&stackName=logzio-s3-hook)     | 
 
-### 1. Specify template
 
-Keep the default setting in the Create stack screen and select **Next**.
+### 1. Specify stack details
 
-![Step 1 screenshot](img/01.png)
+Specify the stack details as per the table below, check the checkboxes and select **Create stack**.
 
-### 2. Specify stack details
-
-Specify the stack details as per the table below and select **Next**.
-
-| Parameter        | Description                                                                                                                                         | Required/Default   |
-|------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|--------------------|
-| `bucketName`     | Name of the bucket you wish to fetch logs from. Will be used for IAM policy.                                                                        | **Required**       |
-| `logzioListener` | The Logz.io listener URL for your region. (For more details, see the [regions page](https://docs.logz.io/user-guide/accounts/account-region.html)   | **Required**       |
-| `logzioToken`    | Your Logz.io log shipping token.                                                                                                                    | **Required**       |
-| `logLevel`       | Log level for the Lambda function. Can be one of: `debug`, `info`, `warn`, `error`, `fatal`, `panic`.                                               | Default: `info`    |
-| `logType`        | The log type you'll use with this Lambda. This is shown in your logs under the type field in Kibana. Logz.io applies parsing based on the log type. | Default: `s3_hook` |
-| `pathsRegexes`   | Comma-seperated list of regexes that match the paths you'd like to pull logs from.                                                                  | -                  |
-| `pathToFields`   | Fields from the path to your logs directory that you want to add to the logs. For example, `org-id/aws-type/account-id` will add each of the fields `ord-id`, `was-type` and `account-id` to the logs that are fetched from the directory that this path refers to.                                                                                                                                                | -                  |
+| Parameter        | Description                                                                                                                                                                                                                                                         | Required/Default   |
+|------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------|
+| `bucketName`     | Name of the bucket you wish to fetch logs from. Will be used for IAM policy.                                                                                                                                                                                        | **Required**       |
+| `logzioListener` | The Logz.io listener URL for your region. (For more details, see the [regions page](https://docs.logz.io/user-guide/accounts/account-region.html)                                                                                                                   | **Required**       |
+| `logzioToken`    | Your Logz.io log shipping token.                                                                                                                                                                                                                                    | **Required**       |
+| `logLevel`       | Log level for the Lambda function. Can be one of: `debug`, `info`, `warn`, `error`, `fatal`, `panic`.                                                                                                                                                               | Default: `info`    |
+| `logType`        | The log type you'll use with this Lambda. This is shown in your logs under the type field in Kibana. Logz.io applies parsing based on the log type.                                                                                                                 | Default: `s3_hook` |
+| `pathsRegexes`   | Comma-seperated list of regexes that match the paths you'd like to pull logs from.                                                                                                                                                                                  | -                  |
+| `pathToFields`   | Fields from the path to your logs directory that you want to add to the logs. For example, `org-id/aws-type/account-id` will add each of the fields `ord-id`, `was-type` and `account-id` to the logs that are fetched from the directory that this path refers to. | -                  |
 
 
-![Step 2 screenshot](img/02.png)
-
-### 3. Configure stack options
-
-Specify the Key and Value parameters for the Tags (optional) and select **Next**.
-
-![Step 3 screenshot](img/03.png)
-
-### 4. Review
-
-Confirm that you acknowledge that AWS CloudFormation might create IAM resources and select **Create stack**.
-
-![Step 4 screenshot](img/04.png)
-
-### 5. Add trigger
+### 3. Add trigger
 
 Give the stack a few minutes to be deployed.
 
@@ -81,7 +62,7 @@ Confirm the checkbox, and click **Add*.
 
 ![Step 5 screenshot](img/06.png)
 
-### 6. Send logs
+### 3. Send logs
 
 That's it. Your function is configured.
 Once you upload new files to your bucket, it will trigger the function, and the logs will be sent to your Logz.io account.
