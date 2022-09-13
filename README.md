@@ -71,7 +71,7 @@ Once you upload new files to your bucket, it will trigger the function, and the 
 
 If there are specific paths within the bucket that you want to pull logs from, you can use the `pathsRegex` variable.
 This variable should hold a comma-seperated list of regexes that match the paths you wish to extract logs from.
-**Note**: this will still trigger your Lambda function every time a new object is added to your bucket. However, if the key does not match the regexes, the function will quit and won't send the logs.
+**Note**: This will still trigger your Lambda function every time a new object is added to your bucket. However, if the key does not match the regexes, the function will quit and won't send the logs.
 
 
 #### Adding object path as logs field
@@ -88,9 +88,9 @@ Setting `pathToFields` with the value: `org-id/aws-type/account-id` will add to 
 1. This will override a field with the same key, if it exists.
 2. In order for the feature to work, you need to set `pathToFields` from the root of the bucket.
 
-#### Control Tower support:
+#### Control Tower support
 
-If you want to ship Control Tower logs, after deploying the S3 Hook stack, you'll need to deploy additional stack.
+If you want to ship Control Tower logs, after the deployment of the S3 Hook stack, you'll need to deploy an additional stack.
 For more details [click here](https://github.com/logzio/s3-hook/tree/master/control_tower).
 
 ## Changelog
