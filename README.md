@@ -114,6 +114,7 @@ Setting `pathToFields` with the value: `org-id/aws-type/account-id` will add to 
 - **0.1.0**:
   - Add ability to filter paths with regex list in field `pathsRegexes`.
   - Add ability to map bucket path as log fields with `pathToFields`.
+  - Automatically detect and parse **CloudTrail** logs.
 - **0.0.2**:
   - **Bug fix**: Decodes folder names, for folders with special characters.
 - **0.0.1**: Initial release.

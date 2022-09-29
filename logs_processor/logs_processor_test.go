@@ -165,6 +165,44 @@ func TestControlTowerParsing(t *testing.T) {
 	}
 }
 
+func TestCloudTrail(t *testing.T) {
+	logType := "test-cloudtrail"
+	logger = setUpTest(logType)
+	numberOfLogsInFile := 2
+	fileName := "cloudtrail.json.gz"
+	contentType := "gz"
+	s3GetObject := getS3OutputObject(fileName, contentType)
+	logs := ProcessLogs(s3GetObject, logger, fmt.Sprintf("435t44fw3/CloudTrail/7493758342983/%s", fileName), testBucketName, testAwsRegion)
+	assert.NotNil(t, logs)
+	assert.Equal(t, numberOfLogsInFile, len(logs))
+	for _, logzioLog := range logs {
+		var tmp map[string]interface{}
+		err := json.Unmarshal(logzioLog, &tmp)
+		assert.NoError(t, err)
+		assert.Equal(t, logType, tmp[fieldType])
+		assert.NotNil(t, tmp["key1"])
+		assert.NotNil(t, tmp["key2"])
+		assert.Nil(t, tmp[fieldMessage])
+	}
+}
+
+func TestCloudTrailInvalid(t *testing.T) {
+	logType := "test-cloudtrail-invalid"
+	logger = setUpTest(logType)
+	fileName := "cloudtrail-invalid.json.gz"
+	contentType := "gz"
+	s3GetObject := getS3OutputObject(fileName, contentType)
+	logs := ProcessLogs(s3GetObject, logger, fmt.Sprintf("435t44fw3/CloudTrail/7493758342983/%s", fileName), testBucketName, testAwsRegion)
+	assert.NotNil(t, logs)
+	for _, logzioLog := range logs {
+		var tmp map[string]interface{}
+		err := json.Unmarshal(logzioLog, &tmp)
+		assert.NoError(t, err)
+		assert.Equal(t, logType, tmp[fieldType])
+		assert.NotNil(t, tmp[fieldMessage])
+	}
+}
+
 func getLogFile(fileName string) string {
 	b, err := os.ReadFile("test_logs/" + fileName)
 	if err != nil {

@@ -22,6 +22,7 @@ const (
 
 func ProcessLogs(s3Object *s3.GetObjectOutput, logger *zap.Logger, key, bucket, awsRegion string) [][]byte {
 	logs := make([][]byte, 0)
+	var logsToConvert []string
 	var logsStr string
 	buf := new(bytes.Buffer)
 	_, err := buf.ReadFrom(s3Object.Body)
@@ -35,25 +36,65 @@ func ProcessLogs(s3Object *s3.GetObjectOutput, logger *zap.Logger, key, bucket, 
 
 	contentType := strings.ToLower(*s3Object.ContentType)
 	logger.Debug(fmt.Sprintf("content type is: %s", contentType))
-	logsStr = getBody(buf, contentType, logger)
+	logsStr = getBody(buf, logger)
 
 	s3Logs := strings.Split(logsStr, "\n")
+	keyLower := strings.ToLower(key)
 	for _, s3Log := range s3Logs {
-		logBytes, err := convertToLogzioLog(s3Log, bucket, key, awsRegion, controlTowerParsing, logger)
-		if err != nil {
+		if len(s3Log) == 0 {
 			continue
 		}
 
-		if logBytes != nil && len(logBytes) > 0 {
-			logger.Debug(fmt.Sprintf("Adding log %s to logs list", string(logBytes)))
-			logs = append(logs, logBytes)
+		// TODO: use a regex to make the decision making more accurate
+		if strings.Contains(keyLower, cloudtrailName) {
+			logsToConvert = extractCloudtrailLogsFromFile(s3Log, logger)
+			logger.Debug(fmt.Sprintf("detected %s logs", cloudtrailName))
+		} else {
+			logsToConvert = []string{s3Log}
+		}
+
+		for _, logToConvert := range logsToConvert {
+			logzioLog := make(map[string]interface{})
+			if strings.Contains(keyLower, cloudtrailName) {
+				err = convertCloudtrailLogs(logzioLog, logToConvert)
+				if err != nil {
+					logger.Error(fmt.Sprintf("error occurred while trying to create cloudtrail log: %s", err.Error()))
+					logger.Error("will send log unparsed")
+				}
+				logger.Debug(fmt.Sprintf("converted %s log", cloudtrailName))
+			} else {
+				logzioLog[fieldMessage] = logToConvert
+			}
+
+			addLogzioFields(logzioLog, bucket, key, awsRegion)
+			if len(controlTowerParsing) > 0 {
+				addControlTowerParsing(controlTowerParsing, key, logzioLog, logger)
+			}
+
+			logBytes, err := json.Marshal(logzioLog)
+			if err != nil {
+				logger.Error(fmt.Sprintf("Error occurred while processing %s: %s", logToConvert, err.Error()))
+				logger.Error("log will be dropped")
+			}
+
+			if logBytes != nil && len(logBytes) > 0 {
+				logger.Debug(fmt.Sprintf("Adding log %s to logs list", string(logBytes)))
+				logs = append(logs, logBytes)
+			}
 		}
 	}
 
 	return logs
 }
 
-func getBody(buf *bytes.Buffer, contentType string, logger *zap.Logger) string {
+func addLogzioFields(logzioLog map[string]interface{}, bucket, key, awsRegion string) {
+	objFullPath := fmt.Sprintf("%s/%s", bucket, key)
+	logzioLog[fieldType] = getLogType()
+	logzioLog[fieldS3Key] = objFullPath
+	logzioLog[fieldAwsRegion] = awsRegion
+}
+
+func getBody(buf *bytes.Buffer, logger *zap.Logger) string {
 	// Try to decompress Gzip:
 	tempBuf := *buf
 	body, err := decompressGzip(&tempBuf)
@@ -130,29 +171,6 @@ func decompressGzip(buf *bytes.Buffer) ([]byte, error) {
 	}
 
 	return decompressed.Bytes(), nil
-}
-
-func convertToLogzioLog(s3Log, bucket, key, awsRegion, controlTowerParsing string, logger *zap.Logger) ([]byte, error) {
-	logger.Debug(fmt.Sprintf("Converting log: %s", s3Log))
-	if len(s3Log) == 0 {
-		return nil, nil
-	}
-	objFullPath := fmt.Sprintf("%s/%s", bucket, key)
-	logzioLog := make(map[string]interface{})
-	logzioLog[fieldType] = getLogType()
-	logzioLog[fieldS3Key] = objFullPath
-	logzioLog[fieldAwsRegion] = awsRegion
-	logzioLog[fieldMessage] = s3Log
-	if len(controlTowerParsing) > 0 {
-		addControlTowerParsing(controlTowerParsing, key, logzioLog, logger)
-	}
-
-	logBytes, err := json.Marshal(logzioLog)
-	if err != nil {
-		logger.Error(fmt.Sprintf("Error occurred while processing %s: %s", objFullPath, err.Error()))
-	}
-
-	return logBytes, err
 }
 
 func addControlTowerParsing(controlTowerParsing, objectKey string, log map[string]interface{}, logger *zap.Logger) {

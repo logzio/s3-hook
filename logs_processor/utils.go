@@ -7,6 +7,9 @@ import (
 const (
 	envLogType      = "LOG_TYPE"
 	envPathToFields = "PATH_TO_FIELDS"
+
+	cloudtrailName = "cloudtrail"
+	recordsField   = "Records"
 )
 
 func getLogType() string {
