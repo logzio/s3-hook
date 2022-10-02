@@ -22,7 +22,7 @@ const (
 
 func ProcessLogs(s3Object *s3.GetObjectOutput, logger *zap.Logger, key, bucket, awsRegion string) [][]byte {
 	logs := make([][]byte, 0)
-	var logsToConvert []string
+	var logsJsons []map[string]interface{}
 	var logsStr string
 	buf := new(bytes.Buffer)
 	_, err := buf.ReadFrom(s3Object.Body)
@@ -45,35 +45,22 @@ func ProcessLogs(s3Object *s3.GetObjectOutput, logger *zap.Logger, key, bucket, 
 			continue
 		}
 
-		// TODO: use a regex to make the decision making more accurate
 		if strings.Contains(keyLower, cloudtrailName) {
-			logsToConvert = extractCloudtrailLogsFromFile(s3Log, logger)
+			logsJsons = extractCloudtrailLogsFromFile(s3Log, logger)
 			logger.Debug(fmt.Sprintf("detected %s logs", cloudtrailName))
 		} else {
-			logsToConvert = []string{s3Log}
+			logsJsons = []map[string]interface{}{{fieldMessage: s3Log}}
 		}
 
-		for _, logToConvert := range logsToConvert {
-			logzioLog := make(map[string]interface{})
-			if strings.Contains(keyLower, cloudtrailName) {
-				err = convertCloudtrailLogs(logzioLog, logToConvert)
-				if err != nil {
-					logger.Error(fmt.Sprintf("error occurred while trying to create cloudtrail log: %s", err.Error()))
-					logger.Error("will send log unparsed")
-				}
-				logger.Debug(fmt.Sprintf("converted %s log", cloudtrailName))
-			} else {
-				logzioLog[fieldMessage] = logToConvert
-			}
-
-			addLogzioFields(logzioLog, bucket, key, awsRegion)
+		for _, logJson := range logsJsons {
+			addLogzioFields(logJson, bucket, key, awsRegion)
 			if len(controlTowerParsing) > 0 {
-				addControlTowerParsing(controlTowerParsing, key, logzioLog, logger)
+				addControlTowerParsing(controlTowerParsing, key, logJson, logger)
 			}
 
-			logBytes, err := json.Marshal(logzioLog)
+			logBytes, err := json.Marshal(logJson)
 			if err != nil {
-				logger.Error(fmt.Sprintf("Error occurred while processing %s: %s", logToConvert, err.Error()))
+				logger.Error(fmt.Sprintf("Error occurred while processing %s: %s", logJson, err.Error()))
 				logger.Error("log will be dropped")
 			}
 

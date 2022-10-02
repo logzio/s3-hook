@@ -108,6 +108,11 @@ Setting `pathToFields` with the value: `org-id/aws-type/account-id` will add to 
 2. In order for the feature to work, you need to set `pathToFields` from the root of the bucket.
 
 
+#### Automatic parsing:
+
+**S3 Hook** will automatically parse logs in the following cases:
+
+- The object's path contains the phrase `cloudtrail` (case insensitive).
 
 ## Changelog
 
