@@ -42,7 +42,7 @@ Specify the stack details as per the table below, check the checkboxes and selec
 | `pathToFields`   | Fields from the path to your logs directory that you want to add to the logs. For example, `org-id/aws-type/account-id` will add each of the fields `ord-id`, `aws-type` and `account-id` to the logs that are fetched from the directory that this path refers to. | -                  |
 
 
-### 3. Add trigger
+### 2. Add trigger
 
 Give the stack a few minutes to be deployed.
 
