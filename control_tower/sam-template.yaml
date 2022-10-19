@@ -26,8 +26,8 @@ Resources:
       Handler: main
       CodeUri:
         Bucket: logzio-aws-integrations-us-east-1
-        Key: s3-hook/control-tower/0.0.1/function.zip
-      FunctionName: logzio-control-tower
+        Key: s3-hook/control-tower/0.0.2/function.zip
+      FunctionName: !Ref AWS::StackName
       MemorySize: 512
       Timeout: 60
       Role: !GetAtt ControlTowerLambdaRole.Arn
@@ -38,7 +38,7 @@ Resources:
   ControlTowerLambdaRole:
     Type: "AWS::IAM::Role"
     Properties:
-      RoleName: ControlTowerLambdaRole
+      RoleName: !Join ['-', ['ControlTowerLambdaRole', !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -50,7 +50,7 @@ Resources:
               - 'sts:AssumeRole'
       Path: /
       Policies:
-        - PolicyName: ControlTowerLambdaPolicy
+        - PolicyName: !Join ['-', ['ControlTowerLambdaPolicy', !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
           PolicyDocument:
             Version: 2012-10-17
             Statement:
@@ -92,7 +92,7 @@ Resources:
             - 's3.amazonaws.com'
           eventName:
             - 'CreateBucket'
-      Name: CreateBucketLambdaTrigger
+      Name: !Join ['-', ['CreateBucketLambdaTrigger', !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
       State: ENABLED
       Targets:
         - Arn: !GetAtt LogzioControlTowerLambda.Arn

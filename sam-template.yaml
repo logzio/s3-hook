@@ -2,10 +2,6 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::Serverless-2016-10-31'
 Description: "This is an AWS Lambda function for shipping logs from S3 bucket. It triggers when a new file is being added to your chosen bucket."
 Parameters:
-  bucketName:
-    Type: String
-    Description: Name of the bucket you wish to fetch logs from. Will be used for IAM policy.
-    MinLength: 1
   logzioToken:
     Type: String
     Description: "Your Logz.io log shipping token."
@@ -60,8 +56,8 @@ Resources:
       Handler: main
       CodeUri:
         Bucket: logzio-aws-integrations-us-east-1
-        Key: s3-hook/0.1.0/function.zip
-      FunctionName: logzio-s3-hook
+        Key: s3-hook/0.2.0/function.zip
+      FunctionName: !Ref AWS::StackName
       MemorySize: 512
       Timeout: 60
       Role: !GetAtt S3HookIamRole.Arn
@@ -76,7 +72,7 @@ Resources:
   S3HookIamRole:
     Type: "AWS::IAM::Role"
     Properties:
-      RoleName: LogzioS3Hook
+      RoleName: !Join ['-', ['LogzioS3Hook', !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -97,7 +93,7 @@ Resources:
                   - 's3:GetObject'
                   - 'logs:CreateLogGroup'
                 Resource:
-                  - !Sub 'arn:aws:s3:::${bucketName}/*'
+                  - !Sub 'arn:aws:s3:::*'
                   - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:*'
               - Effect: Allow
                 Action:

@@ -2,29 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/aws/aws-sdk-go/service/iam"
 	l "github.com/aws/aws-sdk-go/service/lambda"
 	"github.com/aws/aws-sdk-go/service/s3"
 )
-
-func createGetRolePolicyInput(roleName, policyName *string) *iam.GetRolePolicyInput {
-	return &iam.GetRolePolicyInput{RoleName: roleName, PolicyName: policyName}
-}
-
-func createCreatePolicyInput(description, policyDocument, policyName *string) *iam.CreatePolicyInput {
-	return &iam.CreatePolicyInput{
-		Description:    description,
-		PolicyDocument: policyDocument,
-		PolicyName:     policyName,
-	}
-}
-
-func createAttachRolePolicyInput(policyArn, roleName *string) *iam.AttachRolePolicyInput {
-	return &iam.AttachRolePolicyInput{
-		PolicyArn: policyArn,
-		RoleName:  roleName,
-	}
-}
 
 func createAddPermissionsInput(bucketName string, accountId, functionName *string) *l.AddPermissionInput {
 	principal := "s3.amazonaws.com"
