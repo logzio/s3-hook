@@ -56,7 +56,7 @@ Resources:
       Handler: main
       CodeUri:
         Bucket: logzio-aws-integrations-us-east-1
-        Key: s3-hook/0.2.0/function.zip
+        Key: s3-hook/0.2.1/function.zip
       FunctionName: !Ref AWS::StackName
       MemorySize: 512
       Timeout: 60
