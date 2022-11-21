@@ -34,10 +34,7 @@ func ProcessLogs(s3Object *s3.GetObjectOutput, logger *zap.Logger, key, bucket, 
 
 	controlTowerParsing := getControlTowerParsing()
 
-	contentType := strings.ToLower(*s3Object.ContentType)
-	logger.Debug(fmt.Sprintf("content type is: %s", contentType))
 	logsStr = getBody(buf, logger)
-
 	s3Logs := strings.Split(logsStr, "\n")
 	keyLower := strings.ToLower(key)
 	for _, s3Log := range s3Logs {
