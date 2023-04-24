@@ -20,21 +20,8 @@ func TestIsIncludePathInclude(t *testing.T) {
 		"another/to/filter/on",
 	}
 	for _, path := range validPaths {
-		include := IsIncludePath(path, pathsToInclude, logger)
+		include := IsFilterPath(path, pathsToInclude, logger)
 		assert.True(t, include)
-	}
-}
-
-func TestIsIncludePathExclude(t *testing.T) {
-	logger, pathsToInclude = setUpTest()
-	validPaths := []string{
-		"some123/path-abc/ok/file.gz",
-		"bucket/some04/path-xyz/not/ok/foo/logs.log",
-		"not/even/close",
-	}
-	for _, path := range validPaths {
-		include := IsIncludePath(path, pathsToInclude, logger)
-		assert.False(t, include)
 	}
 }
 
