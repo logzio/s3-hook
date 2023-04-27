@@ -19,7 +19,7 @@ func HandleRequest(ctx context.Context, s3Event S3Event) {
 	logger.Info("Starting handling event...")
 	logger.Debug(fmt.Sprintf("Handling event: %+v", s3Event))
 	logzioSender, err := getNewLogzioSender()
-	pathsToInclude := getPathsRegex()
+	pathsToInclude := getIncludePathsRegex()
 	pathsToExclude := getExcludePathsRegex()
 	defer logzioSender.Drain()
 	if err != nil {
@@ -38,6 +38,13 @@ func HandleRequest(ctx context.Context, s3Event S3Event) {
 			continue
 		}
 
+		if pathsToInclude != nil && pathsToExclude != nil {
+			if paths_filter.IsFilterPath(key, pathsToExclude, logger) && paths_filter.IsFilterPath(key, pathsToInclude, logger) {
+					logger.Error(fmt.Sprintf("Include and exclude are mutually exclusive. Cannot use both. Exiting"))
+					continue
+			}
+		}
+
 		if pathsToInclude != nil {
 			if !paths_filter.IsFilterPath(key, pathsToInclude, logger) {
 				logger.Info(fmt.Sprintf("Key %s does not match any of the paths %v. Skipping it.", key, pathsToInclude))
@@ -47,11 +54,6 @@ func HandleRequest(ctx context.Context, s3Event S3Event) {
 
 		if pathsToExclude != nil {
 			if paths_filter.IsFilterPath(key, pathsToExclude, logger) {
-				if pathsToInclude != nil {
-					if paths_filter.IsFilterPath(key, pathsToInclude, logger){
-						logger.Info(fmt.Sprintf("Key %s does  match of the includes paths %v. And also %s does match of the exclude paths %d. Forbitten to have the same parhs in both filters(include, exclude)", key, pathsToInclude, pathsToExclude))
-					}
-				}
 				logger.Info(fmt.Sprintf("Key %s does match one of the paths %v. Excluding path.", key, pathsToExclude))
 				continue
 			}

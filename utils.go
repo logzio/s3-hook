@@ -21,7 +21,7 @@ const (
 	envLogLevel       = "LOG_LEVEL"
 	envLogzioToken    = "LOGZIO_TOKEN"
 	envLogzioListener = "LOGZIO_LISTENER"
-	envPathsRegexes   = "PATHS_REGEXES"
+	envIncludePathsRegexes   = "INCLUDE_PATHS_REGEXES"
 	envExcludePathsRegexes   = "EXCLUDE_PATHS_REGEXES"
 	maxBulkSizeBytes  = 10 * 1024 * 1024 // 10 MB
 )
@@ -133,8 +133,8 @@ func getLogLevel() zapcore.Level {
 	return levelsMap[logLevelStr]
 }
 
-func getPathsRegex() []string {
-	pathsStr := os.Getenv(envPathsRegexes)
+func getIncludePathsRegex() []string {
+	pathsStr := os.Getenv(envIncludePathsRegexes)
 	if len(pathsStr) == 0 {
 		return nil
 	}

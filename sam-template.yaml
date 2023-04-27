@@ -37,7 +37,7 @@ Parameters:
       - error
       - fatal
       - panic
-  pathsRegexes:
+  includePathsRegexes:
     Type: String
     Description: "Comma-seperated list of regex that match the paths you'd like to pull logs from."
   excludePathsRegexes:
@@ -59,7 +59,7 @@ Resources:
       Handler: main
       CodeUri:
         Bucket: logzio-aws-integrations-us-east-1
-        Key: s3-hook/0.2.1/function.zip
+        Key: s3-hook/0.3.0/function.zip
       FunctionName: !Ref AWS::StackName
       MemorySize: 512
       Timeout: 60
@@ -70,7 +70,7 @@ Resources:
           LOGZIO_LISTENER: !Ref logzioListener
           LOG_TYPE: !Ref logType
           LOG_LEVEL: !Ref logLevel
-          PATHS_REGEXES: !Ref pathsRegexes
+          INCLUDE_PATHS_REGEXES: !Ref includePathsRegexes
           EXCLUDE_PATHS_REGEXES: !Ref excludePathsRegexes
           PATH_TO_FIELDS: !Ref pathToFields
   S3HookIamRole:
