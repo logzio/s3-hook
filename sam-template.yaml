@@ -39,10 +39,10 @@ Parameters:
       - panic
   includePathsRegexes:
     Type: String
-    Description: "Comma-seperated list of regex that match the paths you'd like to pull logs from."
+    Description: "Comma-seperated list of regex that match the paths you'd like to pull logs from. That field is mutually exclusive with the `excludePathsRegexes`` field."
   excludePathsRegexes:
     Type: String
-    Description: "Comma-seperated list of regexes that match the paths that won't pull logs from."
+    Description: "Comma-seperated list of regexes that match the paths that won't pull logs from. That field is mutually exclusive with the `includePathsRegexes`` field."
   pathToFields:
     Type: String
     Description: "Fields from the path to your logs directory that you want to add to the logs. For example, `org-id/aws-type/account-id` will add each of the fields `org-id`, `aws-type` and `account-id` to the logs that are fetched from the directory that this path refers to."
