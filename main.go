@@ -45,7 +45,7 @@ func HandleRequest(ctx context.Context, s3Event S3Event) {
 
 		if pathsToInclude != nil {
 			if !paths_filter.IsFilterPath(key, pathsToInclude, logger) {
-				logger.Info(fmt.Sprintf("Key %s does not match any of the paths %v. Skipping it.", key, pathsToInclude))
+				logger.Info(fmt.Sprintf("Key %s does not match any of the include paths %v. Skipping it.", key, pathsToInclude))
 				continue
 			}
 		}
