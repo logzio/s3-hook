@@ -52,7 +52,7 @@ func HandleRequest(ctx context.Context, s3Event S3Event) {
 
 		if pathsToExclude != nil {
 			if paths_filter.IsFilterPath(key, pathsToExclude, logger) {
-				logger.Info(fmt.Sprintf("Key %s does match one of the paths %v. Excluding path.", key, pathsToExclude))
+				logger.Info(fmt.Sprintf("Key %s matches to one of the exclude paths %v. Excluding path.", key, pathsToExclude))
 				continue
 			}
 		}
