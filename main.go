@@ -39,10 +39,8 @@ func HandleRequest(ctx context.Context, s3Event S3Event) {
 		}
 
 		if pathsToInclude != nil && pathsToExclude != nil {
-			if paths_filter.IsFilterPath(key, pathsToExclude, logger) && paths_filter.IsFilterPath(key, pathsToInclude, logger) {
 					logger.Error(fmt.Sprintf("Include and exclude are mutually exclusive. Cannot use both. Exiting"))
-					continue
-			}
+					break
 		}
 
 		if pathsToInclude != nil {
