@@ -69,8 +69,8 @@ Once you upload new files to your bucket, it will trigger the function, and the 
 
 #### Filtering files
 
-If there are specific paths within the bucket that you want to pull logs from, you can use the `pathsRegex` variable.
-This variable should hold a comma-seperated list of regexes that match the paths you wish to extract logs from.
+If you want to pull logs from specific paths within the bucket, use the `includePathsRegexes` variable. Conversely, if there are particular paths within the bucket that you don't want to pull logs from, use the `excludePathsRegexes` variable. These fields are mutually exclusive.
+Both variables should contain a comma-separated list of regular expressions that correspond to the paths from which you want to extract logs (`includePathsRegexes`) or the paths you want to exclude when extracting logs (`excludePathsRegexes`).
 **Note**: This will still trigger your Lambda function every time a new object is added to your bucket. However, if the key does not match the regexes, the function will quit and won't send the logs.
 
 
