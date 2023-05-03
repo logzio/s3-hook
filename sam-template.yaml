@@ -58,8 +58,8 @@ Resources:
       Runtime: go1.x
       Handler: main
       CodeUri:
-        Bucket: logzio-aws-integrations-us-east-1
-        Key: s3-hook/0.3.0/function.zip
+        Bucket: logzio-aws-integrations-<<REGION>>
+        Key: s3-hook/<<VERSION>>/function.zip
       FunctionName: !Ref AWS::StackName
       MemorySize: 512
       Timeout: 60
