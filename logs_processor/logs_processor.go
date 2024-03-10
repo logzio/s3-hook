@@ -21,6 +21,12 @@ const (
 )
 
 func ProcessLogs(s3Object *s3.GetObjectOutput, logger *zap.Logger, key, bucket, awsRegion string) [][]byte {
+	// Check if the file extension is .txt. If not, ignore the file.
+	if !strings.HasSuffix(strings.ToLower(key), ".txt") {
+		logger.Info("Ignoring file due to unsupported file type", zap.String("key", key))
+		return nil
+	}
+
 	logs := make([][]byte, 0)
 	var logsJsons []map[string]interface{}
 	var logsStr string

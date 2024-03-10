@@ -55,7 +55,7 @@ Resources:
   LogzioS3HookLambda:
     Type: 'AWS::Serverless::Function'
     Properties:
-      Runtime: go1.x
+      Runtime: provided.al2023
       Handler: main
       CodeUri:
         Bucket: logzio-aws-integrations-<<REGION>>
