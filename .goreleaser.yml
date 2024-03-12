@@ -14,7 +14,7 @@ builds:
       - linux
     goarch:
       - amd64
-    binary: 'main'
+    binary: 'bootstrap'
   -  
     id: controltower
     env:
@@ -28,7 +28,7 @@ builds:
       - linux
     goarch:
       - amd64
-    binary: 'main'
+    binary: 'bootstrap'
     dir: ./control_tower  
 archives:
   - 

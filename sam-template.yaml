@@ -56,7 +56,7 @@ Resources:
     Type: 'AWS::Serverless::Function'
     Properties:
       Runtime: provided.al2023
-      Handler: main
+      Handler: bootstrap
       CodeUri:
         Bucket: logzio-aws-integrations-<<REGION>>
         Key: s3-hook/<<VERSION>>/function.zip
