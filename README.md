@@ -101,6 +101,9 @@ For more details [click here](https://github.com/logzio/s3-hook/tree/master/cont
 
 ## Changelog
 
+- **0.4.0**:
+  - Extend log processing to include .txt, .log, and .json files; exclude unsupported file types for improved efficiency.
+  - Update AWS Lambda runtime to `provided.al2023` for enhanced performance and compatibility.
 - **0.3.0**:
   - Add new option to exclude path from where won't pull logs.
   - Rename field `pathsRegexes` to `includePathsRegexes`.

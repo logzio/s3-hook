@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"go.uber.org/zap"
+	"io"
 	"io/ioutil"
 	"strings"
 )
@@ -22,59 +23,103 @@ const (
 
 func ProcessLogs(s3Object *s3.GetObjectOutput, logger *zap.Logger, key, bucket, awsRegion string) [][]byte {
 	// Check if the file extension is .txt. If not, ignore the file.
-	if !strings.HasSuffix(strings.ToLower(key), ".txt") {
-		logger.Info("Ignoring file due to unsupported file type", zap.String("key", key))
-		return nil
-	}
+	if strings.HasSuffix(strings.ToLower(key), ".txt") || strings.HasSuffix(strings.ToLower(key), ".log") {
 
-	logs := make([][]byte, 0)
-	var logsJsons []map[string]interface{}
-	var logsStr string
-	buf := new(bytes.Buffer)
-	_, err := buf.ReadFrom(s3Object.Body)
+		logs := make([][]byte, 0)
+		var logsJsons []map[string]interface{}
+		var logsStr string
+		buf := new(bytes.Buffer)
+		_, err := buf.ReadFrom(s3Object.Body)
 
-	if err != nil {
-		logger.Error(fmt.Sprintf("Cannot proccess object %s. Error: %s", key, err.Error()))
-		return nil
-	}
-
-	controlTowerParsing := getControlTowerParsing()
-
-	logsStr = getBody(buf, logger)
-	s3Logs := strings.Split(logsStr, "\n")
-	keyLower := strings.ToLower(key)
-	for _, s3Log := range s3Logs {
-		if len(s3Log) == 0 {
-			continue
+		if err != nil {
+			logger.Error(fmt.Sprintf("Cannot proccess object %s. Error: %s", key, err.Error()))
+			return nil
 		}
 
-		if strings.Contains(keyLower, cloudtrailName) {
-			logsJsons = extractCloudtrailLogsFromFile(s3Log, logger)
-			logger.Debug(fmt.Sprintf("detected %s logs", cloudtrailName))
-		} else {
-			logsJsons = []map[string]interface{}{{fieldMessage: s3Log}}
-		}
+		controlTowerParsing := getControlTowerParsing()
 
-		for _, logJson := range logsJsons {
-			addLogzioFields(logJson, bucket, key, awsRegion)
-			if len(controlTowerParsing) > 0 {
-				addControlTowerParsing(controlTowerParsing, key, logJson, logger)
+		logsStr = getBody(buf, logger)
+		s3Logs := strings.Split(logsStr, "\n")
+		keyLower := strings.ToLower(key)
+		for _, s3Log := range s3Logs {
+			if len(s3Log) == 0 {
+				continue
 			}
 
-			logBytes, err := json.Marshal(logJson)
+			if strings.Contains(keyLower, cloudtrailName) {
+				logsJsons = extractCloudtrailLogsFromFile(s3Log, logger)
+				logger.Debug(fmt.Sprintf("detected %s logs", cloudtrailName))
+			} else {
+				logsJsons = []map[string]interface{}{{fieldMessage: s3Log}}
+			}
+
+			for _, logJson := range logsJsons {
+				addLogzioFields(logJson, bucket, key, awsRegion)
+				if len(controlTowerParsing) > 0 {
+					addControlTowerParsing(controlTowerParsing, key, logJson, logger)
+				}
+
+				logBytes, err := json.Marshal(logJson)
+				if err != nil {
+					logger.Error(fmt.Sprintf("Error occurred while processing %s: %s", logJson, err.Error()))
+					logger.Error("log will be dropped")
+				}
+
+				if logBytes != nil && len(logBytes) > 0 {
+					logger.Debug(fmt.Sprintf("Adding log %s to logs list", string(logBytes)))
+					logs = append(logs, logBytes)
+				}
+			}
+		}
+
+		return logs
+	} else if strings.HasSuffix(strings.ToLower(key), ".json") {
+		// Read the JSON body into a byte slice using io.ReadAll, which is the recommended approach as of Go 1.16.
+		bodyBytes, err := io.ReadAll(s3Object.Body)
+		if err != nil {
+			logger.Error("Failed to read JSON body", zap.Error(err))
+			return nil
+		}
+		// Ensure the body is closed after reading.
+		defer func() {
+			err := s3Object.Body.Close()
 			if err != nil {
-				logger.Error(fmt.Sprintf("Error occurred while processing %s: %s", logJson, err.Error()))
-				logger.Error("log will be dropped")
+				// Handle the error or log it if necessary.
+				logger.Error("Failed to close s3Object.Body", zap.Error(err))
 			}
+		}()
 
-			if logBytes != nil && len(logBytes) > 0 {
-				logger.Debug(fmt.Sprintf("Adding log %s to logs list", string(logBytes)))
-				logs = append(logs, logBytes)
-			}
+		// Prepare a buffer for the compacted JSON.
+		var compactedBuffer bytes.Buffer
+
+		// Use json.Compact to write the compacted JSON to the buffer.
+		if err := json.Compact(&compactedBuffer, bodyBytes); err != nil {
+			logger.Error("Failed to compact JSON", zap.Error(err))
+			return nil
 		}
-	}
 
-	return logs
+		// Unmarshal the compacted JSON to a map for manipulation.
+		var logJson map[string]interface{}
+		if err := json.Unmarshal(compactedBuffer.Bytes(), &logJson); err != nil {
+			logger.Error("Failed to unmarshal compacted JSON", zap.Error(err))
+			return nil
+		}
+
+		// Apply the addLogzioFields function.
+		addLogzioFields(logJson, bucket, key, awsRegion)
+
+		// Marshal the modified map back to a byte slice.
+		modifiedBytes, err := json.Marshal(logJson)
+		if err != nil {
+			logger.Error("Failed to marshal modified JSON", zap.Error(err))
+			return nil
+		}
+
+		return [][]byte{modifiedBytes}
+	} else {
+		logger.Info(fmt.Sprintf("Ignoring unsupported file type for key: %s", key))
+		return nil
+	}
 }
 
 func addLogzioFields(logzioLog map[string]interface{}, bucket, key, awsRegion string) {
