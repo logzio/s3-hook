@@ -22,7 +22,6 @@ const (
 )
 
 func ProcessLogs(s3Object *s3.GetObjectOutput, logger *zap.Logger, key, bucket, awsRegion string) [][]byte {
-	// Check if the file extension is .txt. If not, ignore the file.
 	if strings.HasSuffix(strings.ToLower(key), ".txt") || strings.HasSuffix(strings.ToLower(key), ".log") {
 
 		logs := make([][]byte, 0)
@@ -74,7 +73,7 @@ func ProcessLogs(s3Object *s3.GetObjectOutput, logger *zap.Logger, key, bucket, 
 
 		return logs
 	} else if strings.HasSuffix(strings.ToLower(key), ".json") {
-		// Read the JSON body into a byte slice using io.ReadAll, which is the recommended approach as of Go 1.16.
+		// Read the JSON body into a byte slice using io.ReadAll.
 		bodyBytes, err := io.ReadAll(s3Object.Body)
 		if err != nil {
 			logger.Error("Failed to read JSON body", zap.Error(err))
