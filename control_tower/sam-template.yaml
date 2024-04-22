@@ -22,8 +22,8 @@ Resources:
     DependsOn: ControlTowerLambdaRole
     Type: 'AWS::Serverless::Function'
     Properties:
-      Runtime: go1.x
-      Handler: main
+      Runtime: provided.al2023
+      Handler: bootstrap
       CodeUri:
         Bucket: logzio-aws-integrations-<<REGION>>
         Key: s3-hook/control-tower/<<VERSION>>/function.zip
