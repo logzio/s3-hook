@@ -6,7 +6,7 @@ require (
 	github.com/aws/aws-lambda-go v1.31.1
 	github.com/aws/aws-sdk-go v1.44.9
 	github.com/logzio/logzio-go v1.0.4
-	github.com/stretchr/testify v1.7.1
+	github.com/stretchr/testify v1.9.0
 	go.uber.org/zap v1.21.0
 )
 
@@ -24,5 +24,5 @@ require (
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	golang.org/x/sys v0.0.0-20220128215802-99c3d69c2c27 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
